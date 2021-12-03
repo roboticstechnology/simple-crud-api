@@ -7,7 +7,7 @@ To run the app, please go through the following steps:
 
 Run the follwing command in your terminal:
 
-    https://github.com/anival-github/simple-crud-api.git
+    https://github.com/roboticstechnology/simple-crud-api.git
 
 ## 2. Go to the downloaded repository
 
@@ -15,7 +15,7 @@ Run the follwing command in your terminal:
 
 Run the follwing command in your terminal:
 
-    git checkout task-3-simple-crud-api
+    git checkout crud-dev
 
 ## 4. Install dependencies
 
