@@ -1,63 +1,114 @@
 import http from 'http';
 import url from 'url';
-import dotenv from 'dotenv'
+import dotenv from 'dotenv';
+import { version as uuidVersion } from 'uuid';
 import { validate as uuidValidate } from 'uuid';
 
-import { dtoPerson } from './db/person.db.js'
+import { dtoPerson } from './db/person.db.js';
+import { URLValidtor, pathParamsValidator } from './validators/validator.js';
+import { CustomException } from './exceptions/CustomExceptions.js';
 
 dotenv.config();
 
 const log = console.log;
 const { HOST, PORT } = process.env;
 
-const uuidValidateV4 = uuid => uuidValidate(uuid) && uuidVersion(uuid) === 4;
-
-
-
-class CustomException extends Error {
-
-    constructor(name, message, statusCode) {
-        super(message);
-        this.name = name;
-        this.statusCode = statusCode;
-    }
-
-}
-
-const URLValidtor = urlArr => {
-    if (urlArr.length > 2) throw new CustomException('Invalid URL', 'resource is not found', 404);
-
-    if (urlArr.length === 2) {
-
-        if (urlArr[0] !== 'person') throw new CustomException('Invalid URL', 'resource is not found', 404);
-
-        if (!uuidValidateV4(urlArr[1])) throw new CustomException('Invalid PESON ID', 'PERSON ID is Invalid', 400);
-
-    }
-
-    if (urlArr.length === 1 && urlArr[0] !== 'person') throw new CustomException('Invalid URL', 'resource is not found', 404);
-}
-
 const server = http.createServer((req, res) => {
     const { path } = url.parse(req.url, true);
     let pathArr = path.split('/').filter(el => el !== '');
     const { method } = req;
-    log('pathArr = ', pathArr, 'method=', method);
+    // log('pathArr = ', pathArr, 'method=', method);
     try {
 
         URLValidtor(pathArr);
-        
-        if (method === 'GET') {
-            if (path === '/person') {
-                const result = dtoPerson.getAll();
-                res.statusCode = 200;
-                res.end(JSON.stringify(result));
+
+        if (pathArr.length === 1) {
+
+            if (method === 'GET') {
+                if (path === '/' + pathArr.join('/')) {
+                    const result = dtoPerson.getAll();
+                    res.statusCode = 200;
+                    res.end(JSON.stringify(result));
+                }
             }
-            //if()
+
+            if (method === 'POST') {
+                if (path === '/' + pathArr.join('/')) {
+                    req.on('data', data => {
+                        try {
+                            const person = JSON.parse(data);
+                            pathParamsValidator(person);
+                            const newPerson = dtoPerson.creat(person);
+                            res.statusCode = 201;
+                            res.end(JSON.stringify(newPerson));
+                        } catch (e) {
+                            if (e instanceof CustomException) {
+                                res.statusCode = e.statusCode;
+                                res.end(e.message);
+                            } else {
+                                res.statusCode = 500;
+                                res.end(e.message);
+                            }
+                        }
+
+                    });
+                }
+            }
+        }
+
+        if (pathArr.length === 2) {
+            if (method === 'GET') {
+                const result = dtoPerson.getById(pathArr[1]);
+                if (result) {
+                    res.statusCode = 200;
+                    res.end(JSON.stringify(result));
+                } else {
+                    res.statusCode = 404;
+                    res.end('Person is not found');
+                }
+            }
+
+            if (method === 'DELETE') {
+                const result = dtoPerson.remove(pathArr[1]);
+                if (result) {
+                    res.statusCode = 204;
+                    res.end('okok');
+                } else {
+                    res.statusCode = 404;
+                    res.end('Person is not found');
+                }
+            }
+
+            if (method === 'PUT') {
+                req.on('data', data => {
+                    try {
+                        const personUpdateFields = JSON.parse(data);
+                        // log(personUpdateFields);
+                        const updPerson = dtoPerson.update(pathArr[1], personUpdateFields);
+                        if (updPerson) {
+                            res.statusCode = 200;
+                            res.end(JSON.stringify(updPerson));
+                        } else {
+                            res.statusCode = 404;
+                            res.end('Person is not found');
+                        }
+                    } catch (e) {
+                        if (e instanceof CustomException) {
+                            res.statusCode = e.statusCode;
+                            res.end(e.message);
+                        } else {
+                            res.statusCode = 500;
+                            res.end(e.message);
+                        }
+                    }
+                });
+            }
+
         }
 
 
     } catch (e) {
+        log(e.message);
         if (e instanceof CustomException) {
             res.statusCode = e.statusCode;
             res.end(e.message);

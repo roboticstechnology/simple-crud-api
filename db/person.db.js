@@ -13,16 +13,31 @@ export class dtoPerson {
 
     static getById = id => personDB.find(el => el.id === id);
 
-    static creat = person => { personDB.push(new Person({ preson })) };
+    static creat = person => {
+         console.log(person)
+        let result = new Person(person.name, person.age, person.hobbies);
+        personDB.push(result);
+        return result;
+    };
 
     static update = (id, person) => {
+        let personUpd;
         personDB = personDB.map(el => {
-            if (el.id === id) return el = { ...el, ...person };
+            if (el.id === id) {
+                personUpd = el = { ...el, ...person };
+                return el;
+            }
             return el;
         });
+        return personUpd;
     };
 
     static remove = id => {
-        personDB = personDB.filter(el => el.id !== id)
+        let result;
+        personDB = personDB.filter(el => {
+            if (el.id !== id) return true;
+            result = true;
+        });
+        return result;
     };
 }
